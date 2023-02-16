@@ -14,7 +14,7 @@ import {
 } from './helpers'
 
 
-function getOrCreateFactory(address: string): UniswapFactory {
+function getOrCreateFactory(address: string): UniswapFactory | null {
   // Creates a factory if it doesn't already exist
 
   let factory = UniswapFactory.load(FACTORY_ADDRESS)
@@ -41,17 +41,11 @@ function getOrCreateFactory(address: string): UniswapFactory {
 
 }
 
-function getOrCreateToken(event: PairCreated, is_first: boolean): Token | undefined {
+function getOrCreateToken(event: PairCreated, is_first: boolean): Token | null {
   // get or create the token
 
   // get token identifier from event
-  let token_from_event: any
-  if (is_first) {
-    token_from_event = event.params.token0
-  } else {
-    token_from_event = event.params.token1
-  }
-
+  let token_from_event = is_first ? event.params.token0 : event.params.token1
   let token = Token.load(token_from_event.toHexString())
   if (!token) {
     token = new Token(token_from_event.toHexString())
@@ -61,10 +55,6 @@ function getOrCreateToken(event: PairCreated, is_first: boolean): Token | undefi
 
     // Get token details from event
     let decimals = fetchTokenDecimals(token_from_event) // eth call
-    if (decimals === null) {
-      return
-    }
-
     token.decimals = decimals
     token.derivedETH = ZERO_BD
     token.tradeVolume = ZERO_BD
@@ -74,10 +64,8 @@ function getOrCreateToken(event: PairCreated, is_first: boolean): Token | undefi
     // token0.allPairs = []
     token.mostLiquidPairs = []
     token.txCount = ZERO_BI
-
   }
 
-  token.save()
   return token
 
 }
@@ -85,50 +73,50 @@ function getOrCreateToken(event: PairCreated, is_first: boolean): Token | undefi
 
 export function handleNewPair(event: PairCreated): void {
   // load factory (create if first exchange)
-  try {
 
-    // Creates a factory if it doesn't already exist
-    let factory = getOrCreateFactory(FACTORY_ADDRESS)
+  // Creates a factory if it doesn't already exist
+  let factory = getOrCreateFactory(FACTORY_ADDRESS)
 
-    // create the tokens
-    let token0 = getOrCreateToken(event, true)  // Token.load(event.params.token0.toHexString())
-    let token1 = getOrCreateToken(event, false)  // Token.load(event.params.token1.toHexString())
-    if (!token0 || !token1) {
-      return
-    }
-
-    let pair = new Pair(event.params.pair.toHexString()) as Pair
-    pair.token0 = token0.id
-    pair.token1 = token1.id
-    pair.liquidityProviderCount = ZERO_BI
-    pair.createdAtTimestamp = event.block.timestamp
-    pair.createdAtBlockNumber = event.block.number
-    pair.txCount = ZERO_BI
-    pair.reserve0 = ZERO_BD
-    pair.reserve1 = ZERO_BD
-    pair.trackedReserveETH = ZERO_BD
-    pair.reserveETH = ZERO_BD
-    pair.reserveUSD = ZERO_BD
-    pair.totalSupply = ZERO_BD
-    pair.volumeToken0 = ZERO_BD
-    pair.volumeToken1 = ZERO_BD
-    pair.volumeUSD = ZERO_BD
-    pair.untrackedVolumeUSD = ZERO_BD
-    pair.token0Price = ZERO_BD
-    pair.token1Price = ZERO_BD
-
-    // create the tracked contract based on the template
-    PairTemplate.create(event.params.pair)
-
-    // save updated values
-    pair.save()
-    factory.save()
-
-  } catch (error) {
-    log.error('Subgraph error. Block number: {}, block hash: {}, transaction hash: {}', [
-      event.block.number.toString(), // "47596000"
-      event.block.hash.toHexString(), // "0x..."
-      event.transaction.hash.toHexString(), // "0x..."
-    ])
+  // create the tokens
+  let token0 = getOrCreateToken(event, true)  // Token.load(event.params.token0.toHexString())
+  let token1 = getOrCreateToken(event, false)  // Token.load(event.params.token1.toHexString())
+  if (token0.decimals === null || token1.decimals === null) {
+    return
   }
+
+  let pair = new Pair(event.params.pair.toHexString()) as Pair
+  pair.token0 = token0.id
+  pair.token1 = token1.id
+  pair.liquidityProviderCount = ZERO_BI
+  pair.createdAtTimestamp = event.block.timestamp
+  pair.createdAtBlockNumber = event.block.number
+  pair.txCount = ZERO_BI
+  pair.reserve0 = ZERO_BD
+  pair.reserve1 = ZERO_BD
+  pair.trackedReserveETH = ZERO_BD
+  pair.reserveETH = ZERO_BD
+  pair.reserveUSD = ZERO_BD
+  pair.totalSupply = ZERO_BD
+  pair.volumeToken0 = ZERO_BD
+  pair.volumeToken1 = ZERO_BD
+  pair.volumeUSD = ZERO_BD
+  pair.untrackedVolumeUSD = ZERO_BD
+  pair.token0Price = ZERO_BD
+  pair.token1Price = ZERO_BD
+
+  // create the tracked contract based on the template
+  PairTemplate.create(event.params.pair)
+
+  // save updated values
+  token0.save()
+  token1.save()
+  pair.save()
+  factory.save()
+
+  // log.error('Subgraph error. Block number: {}, block hash: {}, transaction hash: {}', [
+  //   event.block.number.toString(), // "47596000"
+  //   event.block.hash.toHexString(), // "0x..."
+  //   event.transaction.hash.toHexString(), // "0x..."
+  // ])
+
 }
