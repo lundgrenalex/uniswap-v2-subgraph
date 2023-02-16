@@ -1,5 +1,5 @@
 /* eslint-disable prefer-const */
-import { log } from '@graphprotocol/graph-ts'
+import { Address, log } from '@graphprotocol/graph-ts'
 import { UniswapFactory, Pair, Token, Bundle } from '../types/schema'
 import { PairCreated } from '../types/Factory/Factory'
 import { Pair as PairTemplate } from '../types/templates'
@@ -13,28 +13,45 @@ import {
   fetchTokenTotalSupply
 } from './helpers'
 
+
+function getOrCreateFactory(address: string): UniswapFactory {
+  // Creates a factory if it doesn't already exist
+
+  let factory = UniswapFactory.load(FACTORY_ADDRESS)
+  if (factory == null) {
+    factory = new UniswapFactory(FACTORY_ADDRESS)
+    factory.pairCount = 0
+    factory.totalVolumeETH = ZERO_BD
+    factory.totalLiquidityETH = ZERO_BD
+    factory.totalVolumeUSD = ZERO_BD
+    factory.untrackedVolumeUSD = ZERO_BD
+    factory.totalLiquidityUSD = ZERO_BD
+    factory.txCount = ZERO_BI
+    factory.mostLiquidTokens = []
+
+    // create new bundle
+    let bundle = new Bundle('1')
+    bundle.ethPrice = ZERO_BD
+    bundle.save()
+  }
+  factory.pairCount = factory.pairCount + 1
+  factory.save()
+
+  return factory
+
+}
+
+function getOrCreateToken(tokenId: BigInt, address: Address): Token {
+
+}
+
+
 export function handleNewPair(event: PairCreated): void {
   // load factory (create if first exchange)
   try {
-    let factory = UniswapFactory.load(FACTORY_ADDRESS)
-    if (factory == null) {
-      factory = new UniswapFactory(FACTORY_ADDRESS)
-      factory.pairCount = 0
-      factory.totalVolumeETH = ZERO_BD
-      factory.totalLiquidityETH = ZERO_BD
-      factory.totalVolumeUSD = ZERO_BD
-      factory.untrackedVolumeUSD = ZERO_BD
-      factory.totalLiquidityUSD = ZERO_BD
-      factory.txCount = ZERO_BI
-      factory.mostLiquidTokens = []
 
-      // create new bundle
-      let bundle = new Bundle('1')
-      bundle.ethPrice = ZERO_BD
-      bundle.save()
-    }
-    factory.pairCount = factory.pairCount + 1
-    factory.save()
+    // Creates a factory if it doesn't already exist
+    let factory = getOrCreateFactory(FACTORY_ADDRESS)
 
     // create the tokens
     let token0 = Token.load(event.params.token0.toHexString())
@@ -115,6 +132,7 @@ export function handleNewPair(event: PairCreated): void {
     token1.save()
     pair.save()
     factory.save()
+
   } catch (error) {
     log.error('Subgraph error. Block number: {}, block hash: {}, transaction hash: {}', [
       event.block.number.toString(), // "47596000"
