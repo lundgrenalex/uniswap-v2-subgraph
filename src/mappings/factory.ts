@@ -76,11 +76,24 @@ export function handleNewPair(event: PairCreated): void {
 
   // Creates a factory if it doesn't already exist
   let factory = getOrCreateFactory(FACTORY_ADDRESS)
+  if (!factory) {
+    return
+  }
 
   // create the tokens
-  let token0 = getOrCreateToken(event, true)  // Token.load(event.params.token0.toHexString())
-  let token1 = getOrCreateToken(event, false)  // Token.load(event.params.token1.toHexString())
+  let token0 = getOrCreateToken(event, true)
+  let token1 = getOrCreateToken(event, false)
+  if (!token0 || !token1) {
+    return
+  }
+
+
   if (token0.decimals === null || token1.decimals === null) {
+    log.warning('Subgraph decimals warning. Block number: {}, block hash: {}, transaction hash: {}', [
+      event.block.number.toString(), // "47596000"
+      event.block.hash.toHexString(), // "0x..."
+      event.transaction.hash.toHexString(), // "0x..."
+    ])
     return
   }
 
@@ -112,11 +125,5 @@ export function handleNewPair(event: PairCreated): void {
   token1.save()
   pair.save()
   factory.save()
-
-  // log.error('Subgraph error. Block number: {}, block hash: {}, transaction hash: {}', [
-  //   event.block.number.toString(), // "47596000"
-  //   event.block.hash.toHexString(), // "0x..."
-  //   event.transaction.hash.toHexString(), // "0x..."
-  // ])
 
 }
