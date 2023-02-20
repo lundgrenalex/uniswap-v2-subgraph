@@ -77,6 +77,11 @@ export function handleNewPair(event: PairCreated): void {
   // Creates a factory if it doesn't already exist
   let factory = getOrCreateFactory(FACTORY_ADDRESS)
   if (!factory) {
+    log.warning('Subgraph decimals warning. Block number: {}, block hash: {}, transaction hash: {}', [
+      event.block.number.toString(), // "47596000"
+      event.block.hash.toHexString(), // "0x..."
+      event.transaction.hash.toHexString(), // "0x..."
+    ])
     return
   }
 
@@ -84,6 +89,11 @@ export function handleNewPair(event: PairCreated): void {
   let token0 = getOrCreateToken(event, true)
   let token1 = getOrCreateToken(event, false)
   if (!token0 || !token1) {
+    log.warning('Subgraph decimals warning. Block number: {}, block hash: {}, transaction hash: {}', [
+      event.block.number.toString(), // "47596000"
+      event.block.hash.toHexString(), // "0x..."
+      event.transaction.hash.toHexString(), // "0x..."
+    ])
     return
   }
 
